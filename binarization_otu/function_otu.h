@@ -55,8 +55,8 @@ int calculate_total_arry_element(int start, int end, int *histgram){
 
 //分散配列から最小値を取る配列番号を計算
 int smallest_class_variance_threshould(float *class_variance_arry){
-  int i,threshould=1;
-  for(i=threshould;i<256;i++){
+  int i,threshould=0;
+  for(i=threshould;i<255;i++){
     if(class_variance_arry[threshould] > class_variance_arry[i]){
       threshould = i;
     }
@@ -66,8 +66,8 @@ int smallest_class_variance_threshould(float *class_variance_arry){
 
 //分散配列から最大値をとる配列番号を計算
 int largest_between_class_variance_threshould(float *between_class_variance_arry){
-  int i,threshould=1;
-  for(i=threshould;i<256;i++){
+  int i,threshould=0;
+  for(i=threshould;i<255;i++){
     if(between_class_variance_arry[threshould] < between_class_variance_arry[i]){
       threshould = i;
     }
