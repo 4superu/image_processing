@@ -7,12 +7,12 @@
 
 int main(){
 
-  int i, j, class_threshould, between_class_threshould;
-  int total_arry_element_left, total_arry_element_right;
-  int *image_histgram;
-  float variance_left, variance_right, *class_variance_arry, *between_class_variance_arry;
-  float image_pixel_average, hist_average_left, hist_average_right;
-  unsigned char *image_arry, *binary_image_arry_in_class, *binary_image_arry_between_class;
+  int i, j, class_threshould, between_class_threshould;//ループ変数と２つの閾値
+  int total_arry_element_left, total_arry_element_right;//それぞれのクラスでの画素数
+  int *image_histgram;//画像を元に作ったヒストグラム
+  float variance_left, variance_right, *class_variance_arry, *between_class_variance_arry;//それぞれのクラスでの分散、２種類の分散を格納する配列
+  float image_pixel_average, hist_average_left, hist_average_right;//全画素値平均,各クラスヒストグラムの平均値
+  unsigned char *image_arry, *binary_image_arry_in_class, *binary_image_arry_between_class;//二種類の閾値に基づいて作成する画像配列
   FILE *fp;
 
 // 画像を読み込み、配列に格納
