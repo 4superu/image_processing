@@ -38,7 +38,7 @@ int main(){
     class_variance_arry[i] = 0;
     between_class_variance_arry[i] = 0;
   }
-  for(i=1; i<255; i++){
+  for(i=0; i<256; i++){
     //左側クラスの計算
     hist_average_left = calculate_histgram_average(0,i,image_histgram);
     variance_left = calculate_histgram_variance(0,i,image_histgram,hist_average_left);
@@ -58,7 +58,7 @@ int main(){
   class_threshould = smallest_class_variance_threshould(class_variance_arry);
   between_class_threshould = largest_between_class_variance_threshould(between_class_variance_arry);
 
-  for(i=1;i<254;i++){
+  for(i=0;i<256;i++){
     printf("%f  %f\n",class_variance_arry[i],between_class_variance_arry[i]);
   }
   printf("\n%d %d\n\n",class_threshould, between_class_threshould );
