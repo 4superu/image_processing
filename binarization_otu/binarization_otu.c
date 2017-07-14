@@ -17,7 +17,7 @@ int main(){
 
 // 画像を読み込み、配列に格納
   image_arry = (unsigned char*)malloc(sizeof(unsigned char)*IMAGE_SIZE_LENNA*IMAGE_SIZE_LENNA);
-  fp = fopen("lenna.256", "rb");
+  fp = fopen("image/lenna.256", "rb");
   fread(image_arry, sizeof(unsigned char), IMAGE_SIZE_LENNA*IMAGE_SIZE_LENNA, fp);
   fclose(fp);
 
@@ -70,11 +70,11 @@ int main(){
   generate_binary_image(image_arry, binary_image_arry_in_class, class_threshould);
   generate_binary_image(image_arry, binary_image_arry_between_class, between_class_threshould);
 
-  fp = fopen("lennna_between_class.256", "wb");
+  fp = fopen("image/lennna_between_class.256", "wb");
   fwrite(binary_image_arry_between_class, sizeof(unsigned char), IMAGE_SIZE_LENNA*IMAGE_SIZE_LENNA, fp);
   fclose(fp);
 
-  fp = fopen("lennna_in_class.256", "wb");
+  fp = fopen("image/lennna_in_class.256", "wb");
   fwrite(binary_image_arry_in_class, sizeof(unsigned char), IMAGE_SIZE_LENNA*IMAGE_SIZE_LENNA, fp);
   fclose(fp);
 
