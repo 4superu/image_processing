@@ -52,7 +52,6 @@ void FillinLabelingArryBlank(int **labeling_arry, int *fix_labeling_table, int l
 
   for(n=0; n<fix_labeling_table_size; n++){
     if(fix_labeling_table[n] != 0){
-      *max_ladeling_number -= 1;
       for(i=1; i<labeling_arry_size_bertical-1; i++){
         for(j=1; j<labeling_arry_size_horizontal-1; j++){
           if(labeling_arry[i][j] > n){
