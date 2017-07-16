@@ -26,7 +26,7 @@ int main(){
     image_arry[i] = (unsigned char*)malloc(sizeof(unsigned char)*image_size_horizontal);
     labeling_image_arry[i] = (unsigned char*)malloc(sizeof(unsigned char)*image_size_horizontal);
   }
-  fp = fopen("../Image/lennna_between_class.256", "rb");
+  fp = fopen("../Image/lennna_in_class.256", "rb");
   for(i=0;i<image_size_bertical;i++){
     for (j=0;j<image_size_horizontal;j++){
       fread(&image_arry[i][j], sizeof(unsigned char),1,fp);
@@ -72,7 +72,7 @@ int main(){
     }
   }
 
-  fp = fopen("../Image/four_nearest_neibor_lenna.256", "wb");
+  fp = fopen("../Image/inclass_four_nearest_neibor_lenna.256", "wb");
   for(i=0;i<image_size_bertical;i++){
     for (j=0;j<image_size_horizontal;j++){
       fwrite(&labeling_image_arry[i][j], sizeof(int),1,fp);
