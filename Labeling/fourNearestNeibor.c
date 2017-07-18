@@ -10,7 +10,7 @@
 int main(){
   int i,j,image_size_bertical,image_size_horizontal;
   int **labeling_arry, *max_ladeling_number, *fix_labeling_table;
-  unsigned char **image_arry, **labeling_image_arry;
+  unsigned char **image_arry;
   FILE *fp;
 
 //画像サイズの指定
@@ -21,10 +21,8 @@ int main(){
 
 //画像の配列確保・格納
   image_arry = (unsigned char **)malloc(sizeof(unsigned char *)*image_size_bertical);
-  labeling_image_arry = (unsigned char **)malloc(sizeof(unsigned char *)*image_size_bertical);
   for(int i=0; i<image_size_bertical; i++){
     image_arry[i] = (unsigned char*)malloc(sizeof(unsigned char)*image_size_horizontal);
-    labeling_image_arry[i] = (unsigned char*)malloc(sizeof(unsigned char)*image_size_horizontal);
   }
   fp = fopen("../Image/lennna_in_class.256", "rb");
   for(i=0;i<image_size_bertical;i++){
@@ -57,25 +55,12 @@ int main(){
   //修正したことによって出来る不使用ラベル番号を詰める
   FillinLabelingArryBlank(labeling_arry, fix_labeling_table, image_size_bertical+2, image_size_horizontal+2, image_size_bertical*image_size_horizontal/2, max_ladeling_number);
 
-//ラベリング配列の出力と最大ラベンリング番号を出力
-  // for(i=1;i<image_size_bertical+1;i++){
-  //   for(j=1;j<image_size_horizontal+1;j++){
-  //     printf("%d\n",labeling_arry[i][j]);
-  //   }
-  //   printf("\n");
-  // }
   int max_label_number = CheckMaxLabelingNumber(labeling_arry, image_size_bertical+2, image_size_horizontal+2);
 
-  for(i=0; i<image_size_bertical; i++){
-    for(j=0; j<image_size_horizontal; j++){
-      labeling_image_arry[i][j] = (unsigned char)round((float)labeling_arry[i][j]*(255/(float)max_label_number));
-    }
-  }
-
-  fp = fopen("../Image/inclass_four_nearest_neibor_lenna.256", "wb");
-  for(i=0;i<image_size_bertical;i++){
-    for (j=0;j<image_size_horizontal;j++){
-      fwrite(&labeling_image_arry[i][j], sizeof(int),1,fp);
+  fp = fopen("../Image/inclass_four_nearest_neibor_lenna.raw", "wb");
+  for(i=1;i<image_size_bertical+1;i++){
+    for (j=1;j<image_size_horizontal+1;j++){
+      fwrite(&labeling_arry[i][j], sizeof(int),1,fp);
     }
   }
   fclose(fp);

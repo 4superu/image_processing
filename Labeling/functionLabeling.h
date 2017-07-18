@@ -44,7 +44,6 @@ void FixLabelingEquivalance(int **labeling_arry, int *fix_labeling_table, int be
       }
     }
   }
-
 }
 
 void FillinLabelingArryBlank(int **labeling_arry, int *fix_labeling_table, int labeling_arry_size_bertical, int labeling_arry_size_horizontal, int fix_labeling_table_size, int *max_ladeling_number){
