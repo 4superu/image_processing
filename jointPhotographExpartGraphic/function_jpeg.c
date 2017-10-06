@@ -1,104 +1,93 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <string.h>
 #include "hahuman.h"
-#include "jpeg_transform.h"
 
 #define IMAGE_SIZE 256
 
-int main(){
-  int i,n,j,k,u,v,block_number;
-  unsigned char **raw_image;
-  double **dct_image, **scaned_quantized_image, **scaned_quantized_image_arry,  **integral_image_cosine, **integral_dctimage_cosine, **quantized_image, **encoded_image, pi = M_PI;
-  FILE *fp;
+//DCT処理
 
-  raw_image = malloc(sizeof(unsigned char*)*IMAGE_SIZE);
-  integral_image_cosine = malloc(sizeof(double*)*IMAGE_SIZE);
-  dct_image = malloc(sizeof(double*)*IMAGE_SIZE);
-  scaned_quantized_image = malloc(sizeof(double*)*IMAGE_SIZE);
-  scaned_quantized_image_arry = malloc(sizeof(double*)*1024);
-  quantized_image = malloc(sizeof(double*)*IMAGE_SIZE);
-  encoded_image = malloc(sizeof(double*)*IMAGE_SIZE);
+double return_coefficient(int u, int v){
+  switch (u) {
+    case 0:
+    switch (v) {
+      case 0:
+      return 1.0/2.0;
 
-  for(i=0; i<IMAGE_SIZE; i++){
-    raw_image[i] = malloc(sizeof(unsigned char)*IMAGE_SIZE);
-    integral_image_cosine[i] = malloc(sizeof(double)*IMAGE_SIZE);
-    dct_image[i] = malloc(sizeof(double)*IMAGE_SIZE);
-    scaned_quantized_image[i] = malloc(sizeof(double)*IMAGE_SIZE);
-    quantized_image[i] = malloc(sizeof(double)*IMAGE_SIZE);
-    encoded_image[i] = malloc(sizeof(double)*IMAGE_SIZE);
-  }
+      default:
+      return 1.0/sqrt(2.0);
+    }
 
-  for(i=0; i<1024; i++){
-    scaned_quantized_image_arry[i] = malloc(sizeof(double)*64);
-  }
+    default:
+    switch (v) {
+      case 0:
+      return 1.0/sqrt(2.0);
 
-  for(i=0; i<IMAGE_SIZE; i++){
-    for(n=0; n<IMAGE_SIZE; n++){
-      integral_image_cosine[i][n] = 0;
+      default:
+      return 1.0;
     }
   }
+}
 
-  fp = fopen("lenna.raw", "rb");
-  for(i=0; i<IMAGE_SIZE; i++){
-    for (n=0; n<IMAGE_SIZE; n++){
-      fread(&raw_image[i][n], sizeof(unsigned char),1,fp);
-    }
-  }
-  fclose(fp);
+void discreteCosineTransform(unsigned char **raw_image, double **dct_image){
 
-  //DCT
+  int i,n,j,k,u,v;
+  double integral_image_cosine;
+
   for(i=0; i<32; i++){
     for(n=0; n<32; n++){
 
       for(u=0; u<8; u++){
         for(v=0; v<8; v++){
 
+          integral_image_cosine = 0;
           for(j=0; j<8; j++){
             for(k=0; k<8; k++){
-               integral_image_cosine[i*8+u][n*8+v] += raw_image[i*8+j][n*8+k] * cos((2.0*j+1.0)*u*pi/16.0) * cos((2.0*k+1.0)*v*pi/16.0);
-
+               integral_image_cosine += raw_image[i*8+j][n*8+k] * cos((2.0*j+1.0)*u*M_PI/16.0) * cos((2.0*k+1.0)*v*M_PI/16.0);
             }
           }
 
+          dct_image[i*8+u][n*8+v] = return_coefficient(u,v)/4.0 * integral_image_cosine;
+
         }
       }
 
     }
   }
+}
 
-  for(i=0; i<IMAGE_SIZE; i++){
-    for(n=0; n<IMAGE_SIZE; n++){
-      u = i%8;
-      v = n%8;
+//量子化
 
-      dct_image[i][n] = return_coefficient(u,v)/4.0 * integral_image_cosine[i][n];
+int integer_by_threshould(double quantized_image_element){
 
-    }
+  if(0 <= quantized_image_element){
+    return (int)(quantized_image_element + 0.5);
   }
-
-  fp = fopen("dct_image.raw", "wb");
-  for(i=0; i<IMAGE_SIZE; i++){
-    for (n=0; n<IMAGE_SIZE; n++){
-      fwrite(&dct_image[i][n], sizeof(double),1,fp);
-    }
+  else{
+    return (int)(quantized_image_element - 0.5);
   }
-  fclose(fp);
+}
 
-  //量子化
+void quantization(double **dct_image, int **quantized_image){
+  int i,n,u,v;
+
   for(i=0; i<32; i++){
     for(n=0; n<32; n++){
 
       for(u=0; u<8; u++){
         for(v=0; v<8; v++){
-          quantized_image[i*8+u][n*8+v] = dct_image[i*8+u][n*8+v] / q_table[u][v];
+          quantized_image[i*8+u][n*8+v] = integer_by_threshould(dct_image[i*8+u][n*8+v] / q_table[u][v]);
         }
       }
 
     }
   }
+}
 
-  block_number = 0;
+void scan_zigzag(int **scaned_quantized_image_arry, int **quantized_image){
+  int i,n,block_number=0;
+
   for(n=0; n<32; n++){
     for(i=0; i<32; i++){
       scaned_quantized_image_arry[block_number][0] = quantized_image[i*8+0][n*8+0];
@@ -173,32 +162,89 @@ int main(){
       scaned_quantized_image_arry[block_number][62] = quantized_image[i*8+6][n*8+7];
       scaned_quantized_image_arry[block_number][63] = quantized_image[i*8+7][n*8+7];
       block_number++;
-      printf("%lf\n",quantized_image[i*8+0][n*8+0]);
     }
   }
+}
 
-  int element_number = 0;
-  char hahumancode;
-  for(block_number=0; block_number<32*32; block_number++){
-    for(element_number=0; element_number<64; element_number++){
+//符号化
 
-      if(element_number == 0){
-        dc_encode_hahuman
-      }
-      else{
-        // ac_encode_hahuman(block_number, element_number, scaned_quantized_image_arry);
-      }
-
-    }
+int dc_different_value(int **scaned_quantized_image_arry, int block_number){
+  if(block_number == 0){
+    return scaned_quantized_image_arry[block_number][0] - 0;
   }
+  else{
+    return scaned_quantized_image_arry[block_number][0] - scaned_quantized_image_arry[block_number-1][0];
+  }
+}
 
+int select_dc_group(int **scaned_quantized_image_arry, int block_number){
 
+  int difference_dc_element;
 
+  difference_dc_element = dc_different_value(scaned_quantized_image_arry, block_number);
 
-  free(raw_image);
-  free(dct_image);
-  free(scaned_quantized_image);
-  free(integral_image_cosine);
-  free(quantized_image);
+  if(difference_dc_element == 0){
+    return 0;
+  }
+  else{
+    return (int)floor(log2(abs(difference_dc_element))+1.0);
+  }
+}
+
+unsigned long binary_conversion(int decimal_number){
+  unsigned long binary=0, base=1;
+  while(decimal_number > 0){
+    binary = binary + ( decimal_number % 2 ) * base;
+    decimal_number = decimal_number / 2;
+    base = base * 10;
+  }
+  return binary;
 
 }
+
+void binary_conversion_negative(int decimal_number, char *binary_code, int *bit_number){
+  *bit_number = 0;
+  while(abs(decimal_number) > 0){
+    if(abs(decimal_number)%2 == 1){
+      binary_code[*bit_number] = 0;
+    }
+    else{
+      binary_code[*bit_number] = 1;
+    }
+    decimal_number = decimal_number/2;
+    *bit_number = *bit_number + 1;
+  }
+}
+
+int select_ac_group(int ac_coefficient){
+  ac_coefficient = abs(ac_coefficient);
+  if(abs(ac_coefficient) == 0){
+    return 0;
+  }
+  else{
+    return (int)floor(log2(ac_coefficient))+1;
+  }
+}
+
+// char ac_code_bit(int ac_group, int bit_number){
+//   if(ac_code_table[ac_group][bit_number] == 1 || ac_code_table[ac_group][bit_number] == 0){
+//     return ac_code_table[ac_group][bit_number];
+//   }
+//   else{
+//     printf("code_miss!!\n");
+//     exit(0);
+//   }
+// }
+
+
+
+
+
+
+
+
+
+
+// int ac_encode_hahuman(int block_number, int element_number, double **scaned_quantized_image_arry){
+//
+// }
