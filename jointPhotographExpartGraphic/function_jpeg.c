@@ -170,7 +170,7 @@ void scan_zigzag(int **scaned_quantized_image_arry, int **quantized_image){
 
 int dc_different_value(int **scaned_quantized_image_arry, int block_number){
   if(block_number == 0){
-    return scaned_quantized_image_arry[block_number][0] - 0;
+    return scaned_quantized_image_arry[block_number][0];
   }
   else{
     return scaned_quantized_image_arry[block_number][0] - scaned_quantized_image_arry[block_number-1][0];
@@ -225,26 +225,3 @@ int select_ac_group(int ac_coefficient){
     return (int)floor(log2(ac_coefficient))+1;
   }
 }
-
-// char ac_code_bit(int ac_group, int bit_number){
-//   if(ac_code_table[ac_group][bit_number] == 1 || ac_code_table[ac_group][bit_number] == 0){
-//     return ac_code_table[ac_group][bit_number];
-//   }
-//   else{
-//     printf("code_miss!!\n");
-//     exit(0);
-//   }
-// }
-
-
-
-
-
-
-
-
-
-
-// int ac_encode_hahuman(int block_number, int element_number, double **scaned_quantized_image_arry){
-//
-// }
