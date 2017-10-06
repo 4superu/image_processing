@@ -44,7 +44,8 @@ int main(){
   scan_zigzag(scaned_quantized_image_arry, quantized_image);
 
   //符号化
-  fp = fopen("encoded_data.txt", "a");
+  fp = fopen("encoded_data.txt", "w");
+  int ac_value=0;
 
   for(block_number=0; block_number<32*32; block_number++){
     for(element_number=0; element_number<64; element_number++){
@@ -70,26 +71,27 @@ int main(){
             bit_number--;
           }
         }
-
       }
 
-      //AC符号化
-      int ac_value=0;
-      ac_zero_run = 0;
       else{
+        //AC符号化
         ac_group = select_ac_group(scaned_quantized_image_arry[block_number][element_number]);
+
         if(ac_group != 0){
-          for(i=0; i<ac_length_table[*****]; i++){
-            fprintf(fp, "%d", ac_code_table[******][i] );
+          for(i=0; i<ac_length_table[((ac_zero_run*11)+ac_group)]; i++){
+            fprintf(fp, "%d", ac_code_table[(ac_zero_run*11)+ac_group][i]);
           }
           ac_zero_run = 0;
         }
         else{
-          ac_zero_run++;
+          if(ac_zero_run < 10){
+            ac_zero_run++;
+          }
         }
+
         ac_value = scaned_quantized_image_arry[block_number][element_number];
         if(ac_value > 0){
-          snprintf(binary_code, 12, "%ld", binary_conversion(ac_value);
+          snprintf(binary_code, 12, "%ld", binary_conversion(ac_value));
           fprintf(fp, "%s", binary_code);
         }
         else if(ac_value < 0){
@@ -99,14 +101,15 @@ int main(){
             bit_number--;
           }
         }
-
+        if(element_number == 63){
+          for(i=0; i<4; i++){
+            fprintf(fp, "%d",ac_code_table[0][i]);
+          }
+        }
       }
-
     }
   }
   fclose(fp);
-
-
 
   free(raw_image);
   free(dct_image);
@@ -114,5 +117,4 @@ int main(){
   free(scaned_quantized_image_arry);
   free(binary_code);
   free(binary_code_inv);
-
 }
