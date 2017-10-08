@@ -1,55 +1,52 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#include "hahuman.h"
-#include "dct.h"
+#include "inverse_function_jpeg.c"
+#include "inverse_jpeg_variable.h"
 
 int main(){
 
   int i,n,j,k,u,v;
-  // compression
-  unsigned char **jpeg_image;
-  double **integral_dctimage_cosine, pi = M_PI;
-  FILE *fp;
 
   jpeg_image = malloc(sizeof(unsigned char*)*IMAGE_SIZE);
-  integral_dctimage_cosine = malloc(sizeof(double*)*IMAGE_SIZE);
+  inverse_quantized_image = malloc(sizeof(unsigned char*)*IMAGE_SIZE);
+  inverse_encoded_image = malloc(sizeof(int)*IMAGE_SIZE);
+  inverse_encoded_image_array = malloc(sizeof(int*)*32*32);
 
   for(i=0; i<IMAGE_SIZE; i++){
     jpeg_image[i] = malloc(sizeof(unsigned char)*IMAGE_SIZE);
-    integral_dctimage_cosine[i] = malloc(sizeof(double)*IMAGE_SIZE);
-    dct_image[i] = malloc(sizeof(double)*IMAGE_SIZE);
+    inverse_quantized_image[i] = malloc(sizeof(double)*IMAGE_SIZE);
+    inverse_encoded_image[i] = malloc(sizeof(int)*IMAGE_SIZE);
+  }
+  for(i=0; i<32*32; i++){
+    inverse_encoded_image_array[i] = malloc(sizeof(double)*64);
   }
 
-  for(i=0; i<IMAGE_SIZE; i++){
-    for(n=0; n<IMAGE_SIZE; n++){
-      integral_dctimage_cosine[i][n] = 0;
-    }
-  }
+  fp = fopen("encoded_data.txt", "rb");
+  fread(&encoded_data, sizeof(int),"サイズどうしよう", fp);
+  fclose(fp);
 
-  for(i=0; i<32; i++){
-    for(n=0; n<32; n++){
+  //逆符号化
+  dc_flag = true;
+  binary_number = 0;
+  while(encoded_data[binary_number] != EOF){
+    if(dc_flag){
+      while(encoded_data[binary_number] == 0){
 
-      for(j=0; j<8; j++){
-        for(k=0; k<8; k++){
-
-          for(u=0; u<8; u++){
-            for(v=0; v<8; v++){
-              integral_dctimage_cosine[i*8+j][n*8+k] += return_coefficient(u,v) * dct_image[i*8+u][n*8+v] * cos((2.0*j+1.0)*u*pi/16.0) * cos((2.0*k+1.0)*v*pi/16.0);
-            }
-          }
-
-        }
       }
-
     }
+    encoded_data[binary_number]
   }
 
-  for(i=0; i<IMAGE_SIZE; i++){
-    for(n=0; n<IMAGE_SIZE; n++){
-      jpeg_image[i][n] = 1.0/4.0 * integral_dctimage_cosine[i][n];
-    }
-  }
+
+
+  //スキャン??
+
+  //逆量子化
+  inverse_quantization(inverse_encoded_image, inverse_quantized_image);
+
+  //逆DCT
+  inverseDiscreteCosineTransform(jpeg_image, inverse_quantized_image);
 
   fp = fopen("lenna_inversed.raw", "wb");
   for(i=0; i<IMAGE_SIZE; i++){

@@ -13,9 +13,7 @@ int main(){
   raw_image = malloc(sizeof(unsigned char*)*IMAGE_SIZE);
   dct_image = malloc(sizeof(double*)*IMAGE_SIZE);
   quantized_image = malloc(sizeof(int*)*IMAGE_SIZE);
-
   scaned_quantized_image_arry = malloc(sizeof(int*)*1024);
-
   for(i=0; i<IMAGE_SIZE; i++){
     raw_image[i] = malloc(sizeof(unsigned char)*IMAGE_SIZE);
     dct_image[i] = malloc(sizeof(double)*IMAGE_SIZE);
