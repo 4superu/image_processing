@@ -8,12 +8,14 @@ int main(){
 
   int i,n,j,k,u,v;
 
-  binary_code = malloc(sizeof(char)*12);
+  binary_code = malloc(sizeof(int)*12);
   binary_code_inv = malloc(sizeof(char)*12);
   raw_image = malloc(sizeof(unsigned char*)*IMAGE_SIZE);
   dct_image = malloc(sizeof(double*)*IMAGE_SIZE);
   quantized_image = malloc(sizeof(int*)*IMAGE_SIZE);
   scaned_quantized_image_arry = malloc(sizeof(int*)*1024);
+  encode_data_arry = malloc(sizeof(int)*256*256*8);
+
   for(i=0; i<IMAGE_SIZE; i++){
     raw_image[i] = malloc(sizeof(unsigned char)*IMAGE_SIZE);
     dct_image[i] = malloc(sizeof(double)*IMAGE_SIZE);
@@ -24,7 +26,7 @@ int main(){
   }
 
   //lenna読み込み
-  fp = fopen("lenna.raw", "rb");
+  fp = fopen("image/lenna.raw", "rb");
   for(i=0; i<IMAGE_SIZE; i++){
     for (n=0; n<IMAGE_SIZE; n++){
       fread(&raw_image[i][n], sizeof(unsigned char),1,fp);
@@ -42,71 +44,65 @@ int main(){
   scan_zigzag(scaned_quantized_image_arry, quantized_image);
 
   //符号化
-  fp = fopen("encoded_data.txt", "w");
-  int ac_value=0;
+  encode_data_number = 0;
 
-  for(block_number=0; block_number<32*32; block_number++){
+  for(block_number=0; block_number<(32*32); block_number++){
     for(element_number=0; element_number<64; element_number++){
 
       //DC符号化
       if(element_number == 0){
-        dc_group = select_dc_group(scaned_quantized_image_arry, block_number);//dcのssss求める
+        dc_group_binary(scaned_quantized_image_arry, block_number, &encode_data_number, encode_data_arry);
 
-        for(i=0; i<dc_length_table[dc_group]; i++){
-          fprintf(fp, "%d", dc_code_table[dc_group][i]);
-        }
-
-        diff_value = dc_different_value(scaned_quantized_image_arry, block_number);
-
-        if(diff_value > 0){
-          snprintf(binary_code, 12, "%ld", binary_conversion(diff_value));
-          fprintf(fp, "%s", binary_code);
-        }
-        else if(diff_value < 0){
-          binary_conversion_negative(diff_value, binary_code, &bit_number);
-          while(bit_number > 0){
-            fprintf(fp, "%d", binary_code[bit_number-1]);
-            bit_number--;
-          }
-        }
+        binary_conversion(dc_different_value(scaned_quantized_image_arry, block_number), encode_data_arry, &encode_data_number);
       }
 
       else{
         //AC符号化
-        ac_group = select_ac_group(scaned_quantized_image_arry[block_number][element_number]);
+        ac_group = select_ac_group(scaned_quantized_image_arry[block_number][element_number
+        ]);
 
-        if(ac_group != 0){
-          for(i=0; i<ac_length_table[((ac_zero_run*11)+ac_group)]; i++){
-            fprintf(fp, "%d", ac_code_table[(ac_zero_run*11)+ac_group][i]);
+        if(ac_group > 0){
+          for(i=0; i<ac_length_table[ac_group]; i++){
+            encode_data_arry[encode_data_number] = ac_code_table[ac_group][i];
+            encode_data_number++;
           }
-          ac_zero_run = 0;
         }
         else{
-          if(ac_zero_run < 10){
-            ac_zero_run++;
-          }
+          ac_zero_run++;
         }
 
-        ac_value = scaned_quantized_image_arry[block_number][element_number];
-        if(ac_value > 0){
-          snprintf(binary_code, 12, "%ld", binary_conversion(ac_value));
-          fprintf(fp, "%s", binary_code);
+        if(ac_group != 0){
+          add_zero_run_code(encode_data_arry, &encode_data_number, &ac_zero_run);
+          binary_conversion(scaned_quantized_image_arry[block_number][element_number], encode_data_arry, &encode_data_number);
         }
-        else if(ac_value < 0){
-          binary_conversion_negative(ac_value, binary_code, &bit_number);
-          while(bit_number > 0){
-            fprintf(fp, "%d", binary_code[bit_number-1]);
-            bit_number--;
-          }
-        }
+
         if(element_number == 63){
-          for(i=0; i<4; i++){
-            fprintf(fp, "%d",ac_code_table[0][i]);
-          }
+          add_block_end_binary(encode_data_arry, &encode_data_number);
+          ac_zero_run = 0;
         }
+
       }
+
     }
   }
+
+  printf("%ld\n",encode_data_number );
+
+  //raw書き込み
+  raw_encode_data = malloc(sizeof(unsigned char)*encode_data_number);
+
+
+  for(i=0; i<encode_data_number; i++){
+    if(encode_data_arry[i] == 1){
+      raw_encode_data[i/8] += pow(2,(7-(i%8)));
+    }
+  }
+
+  fp = fopen("image/encode_data.raw", "wb");
+  fwrite(raw_encode_data, sizeof(unsigned char), 256*256, fp);
+  fclose(fp);
+
+
   fclose(fp);
 
   free(raw_image);
@@ -115,4 +111,5 @@ int main(){
   free(scaned_quantized_image_arry);
   free(binary_code);
   free(binary_code_inv);
+  free(encode_data_arry);
 }
