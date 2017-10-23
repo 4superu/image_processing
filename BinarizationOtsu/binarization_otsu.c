@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#include "functionOtsu.h"
+#include "functionOtsu.c"
 
 #define IMAGE_SIZE_LENNA 256
 
