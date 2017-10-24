@@ -42,6 +42,7 @@ int main(){
 
   //符号化
   encode_data_number = 0;
+  ac_zero_run = 0;
 
   for(block_number=0; block_number<(32*32); block_number++){
     for(element_number=0; element_number<64; element_number++){
@@ -54,11 +55,14 @@ int main(){
         //AC符号化
         ac_group = select_ac_group(scaned_quantized_image_arry[block_number][element_number
         ]);
-        ac_group_binary(encode_data_arry, &encode_data_number, ac_group, &ac_zero_run);
 
         if(ac_group != 0){
           add_zero_run_code(encode_data_arry, &encode_data_number, &ac_zero_run);
+          ac_group_binary(encode_data_arry, &encode_data_number, ac_group, &ac_zero_run);
           binary_conversion(scaned_quantized_image_arry[block_number][element_number], encode_data_arry, &encode_data_number);
+        }
+        else{
+          ac_zero_run++;
         }
         if(element_number == 63){
           add_block_end_binary(encode_data_arry, &encode_data_number);
@@ -87,7 +91,7 @@ int main(){
 
   //inverse側
   inversed_encoded_binary_array = malloc(sizeof(int)*(encode_data_number+8));
-  inversed_frequency_component_arry = malloc(sizeof(int)*32*32);
+  inversed_frequency_component_arry = malloc(sizeof(int*)*32*32);
   for(i=0; i<32*32; i++){
     inversed_frequency_component_arry[i] = malloc(sizeof(int)*64);
   }
@@ -106,12 +110,9 @@ int main(){
 
     //DC逆符号化
     if(dc_flag){
-      dc_group = dc_group_judgment(inverse_binary_progress, inversed_encoded_binary_array);
-
-      inverse_binary_progress += dc_length_table[dc_group];
-
-
+      
     }
+
 
   }
 
