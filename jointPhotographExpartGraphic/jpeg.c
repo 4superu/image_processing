@@ -110,7 +110,8 @@ int main(){
 
     //DC逆符号化
     if(dc_flag){
-      
+      dc_group = dc_group_judgment(inverse_binary_progress, inversed_encoded_binary_array);
+      inverse_binary_progress += dc_length_table[dc_group];
     }
 
 
