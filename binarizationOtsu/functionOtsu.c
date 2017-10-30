@@ -1,14 +1,5 @@
-// #define BER_SIZE 400
-// #define HOR_SIZE 266
-// #define BER_SIZE 512
-// #define HOR_SIZE 512
-// #define BER_SIZE 400
-// #define HOR_SIZE 600
-#define BER_SIZE 256
-#define HOR_SIZE 256
-
-
-
+#define BER_SIZE 400
+#define HOR_SIZE 600
 
 //画像の濃度ヒストグラムを作成
 void StoreImageHistgram(unsigned char **image_arry, int *image_histgram){

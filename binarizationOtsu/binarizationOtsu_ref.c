@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <math.h>
 #include "functionOtsu.c"
-// #include "variableOtsu,h"
 
 int main(){
 
@@ -37,9 +36,6 @@ int main(){
     image_histgram[i]=0;
   }
   StoreImageHistgram(image, image_histgram);
-
-//画像の総画素値の平均値
-  // image_pixel_average = CalculateImagePixelAverage(image);
 
 // クラス分けを行い、それぞれ計算する
 
