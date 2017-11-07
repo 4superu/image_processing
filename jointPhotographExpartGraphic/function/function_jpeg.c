@@ -279,18 +279,17 @@ void compression_to_raw(unsigned char *raw_encode_data, long *encode_data_number
 
 //逆符号化
 
-//一旦全部 01 に戻す
 void inverse_binary_data(unsigned char raw_data, int *inversed_encoded_binary_array, long *inverse_binary_number){
   int i,binary_code[8] = {0};
 
   for(i=0; i<8; i++){
-    if(raw_data%2 == 1){
+    if((int)raw_data%2 == 1){
       binary_code[i] = 1;
     }
     else{
       binary_code[i] = 0;
     }
-    raw_data = raw_data/2;
+    raw_data = (int)raw_data/2;
   }
   for(i=0; i<8; i++){
     inversed_encoded_binary_array[*inverse_binary_number] = binary_code[7-i];
@@ -300,48 +299,173 @@ void inverse_binary_data(unsigned char raw_data, int *inversed_encoded_binary_ar
 
 int serch_dc_table(int *dc_group_binary, int binary_count){
   int i,n;
-  bool found_flag = true;
+  bool found_flag;
+
   for(n=0; n<12; n++){
+    found_flag = true;
     for(i=0; i<binary_count; i++){
       if(!((int)dc_code_table[n][i] == dc_group_binary[i])){
         found_flag = false;
       }
     }
     if(found_flag){
-      return binary_count;
+      return n;
     }
   }
-
   return -1;
 }
 
 int dc_group_judgment(int start_point, int *inversed_encoded_binary_array){
-  int i = start_point, dc_group_binary[9]={-1}, dc_group = -1;
+  int i = 0, dc_group_binary[9]={-1}, dc_group = -1;
 
   while(dc_group == -1){
-    dc_group_binary[i] = inversed_encoded_binary_array[i];
-    dc_group = serch_dc_table(dc_group_binary, (i - start_point + 1));
+    dc_group_binary[i] = inversed_encoded_binary_array[start_point+i];
+    dc_group = serch_dc_table(dc_group_binary, (i+1));
 
     if(dc_group != -1){
       return dc_group;
     }
     i++;
   }
-  return dc_group;
+  return (0);
+}
+
+int ac_group_judgment(int start_point, int *inversed_encoded_binary_array){
+  int i,n,j,code_table_point;
+  bool faund_flag = true;
+
+  for(i=0; i<16; i++){
+    for(n=1; n<=10; n++){
+      code_table_point = i*11+n;
+      for(j=0; j<ac_length_table[code_table_point]; j++){
+        if(inversed_encoded_binary_array[start_point+j] != (int)ac_code_table[j]){
+          faund_flag = false;
+        }
+      }
+      if(faund_flag){
+        return code_table_point;
+      }
+    }
+  }
+  return -1;
+}
+
+int integer_conversion(int start_point, int *inversed_encoded_binary_array, int value_group){
+  int i = 0, value=0;
+
+  while(i<value_group){
+    if(inversed_encoded_binary_array[start_point+i] == 1){
+      value += pow(2, value_group-(i+1));
+    }
+    i++;
+  }
+
+  if(inversed_encoded_binary_array[start_point] == 0){
+    //負数の処理
+    return value = pow(2,value_group) - value - 1;
+  }
+  else{
+    //正数ならそのまま
+    return value;
+  }
+}
+
+void inverse_scan_zigzag(int **inversed_frequency_component_arry, int **scaned_freaquency_image){
+
+  int i,n,block_number=0;
+
+  for(i=0; i<32; i++){
+    for(n=0; n<32; n++){
+
+      scaned_freaquency_image[i*8+0][n*8+0] = inversed_frequency_component_arry[block_number][0];
+      scaned_freaquency_image[i*8+0][n*8+1] = inversed_frequency_component_arry[block_number][1];
+      scaned_freaquency_image[i*8+1][n*8+0] = inversed_frequency_component_arry[block_number][2];
+      scaned_freaquency_image[i*8+2][n*8+0] = inversed_frequency_component_arry[block_number][3];
+      scaned_freaquency_image[i*8+1][n*8+1] = inversed_frequency_component_arry[block_number][4];
+      scaned_freaquency_image[i*8+0][n*8+2] = inversed_frequency_component_arry[block_number][5];
+      scaned_freaquency_image[i*8+0][n*8+3] = inversed_frequency_component_arry[block_number][6];
+      scaned_freaquency_image[i*8+1][n*8+2] = inversed_frequency_component_arry[block_number][7];
+
+      scaned_freaquency_image[i*8+2][n*8+1] = inversed_frequency_component_arry[block_number][8];
+      scaned_freaquency_image[i*8+3][n*8+0] = inversed_frequency_component_arry[block_number][9];
+      scaned_freaquency_image[i*8+4][n*8+0] = inversed_frequency_component_arry[block_number][10];
+      scaned_freaquency_image[i*8+3][n*8+1] = inversed_frequency_component_arry[block_number][11];
+      scaned_freaquency_image[i*8+2][n*8+2] = inversed_frequency_component_arry[block_number][12];
+      scaned_freaquency_image[i*8+1][n*8+3] = inversed_frequency_component_arry[block_number][13];
+      scaned_freaquency_image[i*8+0][n*8+4] = inversed_frequency_component_arry[block_number][14];
+      scaned_freaquency_image[i*8+0][n*8+5] = inversed_frequency_component_arry[block_number][15];
+
+      scaned_freaquency_image[i*8+1][n*8+4] = inversed_frequency_component_arry[block_number][16];
+      scaned_freaquency_image[i*8+2][n*8+3] = inversed_frequency_component_arry[block_number][17];
+      scaned_freaquency_image[i*8+3][n*8+2] = inversed_frequency_component_arry[block_number][18];
+      scaned_freaquency_image[i*8+4][n*8+1] = inversed_frequency_component_arry[block_number][19];
+      scaned_freaquency_image[i*8+5][n*8+0] = inversed_frequency_component_arry[block_number][20];
+      scaned_freaquency_image[i*8+6][n*8+0] = inversed_frequency_component_arry[block_number][21];
+      scaned_freaquency_image[i*8+5][n*8+1] = inversed_frequency_component_arry[block_number][22];
+      scaned_freaquency_image[i*8+4][n*8+2] = inversed_frequency_component_arry[block_number][23];
+
+      scaned_freaquency_image[i*8+3][n*8+3] = inversed_frequency_component_arry[block_number][24];
+      scaned_freaquency_image[i*8+2][n*8+4] = inversed_frequency_component_arry[block_number][25];
+      scaned_freaquency_image[i*8+1][n*8+5] = inversed_frequency_component_arry[block_number][26];
+      scaned_freaquency_image[i*8+0][n*8+6] = inversed_frequency_component_arry[block_number][27];
+      scaned_freaquency_image[i*8+0][n*8+7] = inversed_frequency_component_arry[block_number][28];
+      scaned_freaquency_image[i*8+1][n*8+6] = inversed_frequency_component_arry[block_number][29];
+      scaned_freaquency_image[i*8+2][n*8+5] = inversed_frequency_component_arry[block_number][30];
+      scaned_freaquency_image[i*8+3][n*8+4] = inversed_frequency_component_arry[block_number][31];
+
+      scaned_freaquency_image[i*8+4][n*8+3] = inversed_frequency_component_arry[block_number][32];
+      scaned_freaquency_image[i*8+5][n*8+2] = inversed_frequency_component_arry[block_number][33];
+      scaned_freaquency_image[i*8+6][n*8+1] = inversed_frequency_component_arry[block_number][34];
+      scaned_freaquency_image[i*8+7][n*8+0] = inversed_frequency_component_arry[block_number][35];
+      scaned_freaquency_image[i*8+7][n*8+1] = inversed_frequency_component_arry[block_number][36];
+      scaned_freaquency_image[i*8+6][n*8+2] = inversed_frequency_component_arry[block_number][37];
+      scaned_freaquency_image[i*8+5][n*8+3] = inversed_frequency_component_arry[block_number][38];
+      scaned_freaquency_image[i*8+4][n*8+4] = inversed_frequency_component_arry[block_number][39];
+
+      scaned_freaquency_image[i*8+3][n*8+5] = inversed_frequency_component_arry[block_number][40];
+      scaned_freaquency_image[i*8+2][n*8+6] = inversed_frequency_component_arry[block_number][41];
+      scaned_freaquency_image[i*8+1][n*8+7] = inversed_frequency_component_arry[block_number][42];
+      scaned_freaquency_image[i*8+2][n*8+7] = inversed_frequency_component_arry[block_number][43];
+      scaned_freaquency_image[i*8+3][n*8+6] = inversed_frequency_component_arry[block_number][44];
+      scaned_freaquency_image[i*8+4][n*8+5] = inversed_frequency_component_arry[block_number][45];
+      scaned_freaquency_image[i*8+5][n*8+4] = inversed_frequency_component_arry[block_number][46];
+      scaned_freaquency_image[i*8+6][n*8+3] = inversed_frequency_component_arry[block_number][47];
+
+      scaned_freaquency_image[i*8+7][n*8+2] = inversed_frequency_component_arry[block_number][48];
+      scaned_freaquency_image[i*8+7][n*8+3] = inversed_frequency_component_arry[block_number][49];
+      scaned_freaquency_image[i*8+6][n*8+4] = inversed_frequency_component_arry[block_number][50];
+      scaned_freaquency_image[i*8+5][n*8+5] = inversed_frequency_component_arry[block_number][51];
+      scaned_freaquency_image[i*8+4][n*8+6] = inversed_frequency_component_arry[block_number][52];
+      scaned_freaquency_image[i*8+3][n*8+7] = inversed_frequency_component_arry[block_number][53];
+      scaned_freaquency_image[i*8+4][n*8+7] = inversed_frequency_component_arry[block_number][54];
+      scaned_freaquency_image[i*8+5][n*8+6] = inversed_frequency_component_arry[block_number][55];
+
+      scaned_freaquency_image[i*8+6][n*8+5] = inversed_frequency_component_arry[block_number][56];
+      scaned_freaquency_image[i*8+7][n*8+4] = inversed_frequency_component_arry[block_number][57];
+      scaned_freaquency_image[i*8+7][n*8+5] = inversed_frequency_component_arry[block_number][58];
+      scaned_freaquency_image[i*8+6][n*8+6] = inversed_frequency_component_arry[block_number][59];
+      scaned_freaquency_image[i*8+5][n*8+7] = inversed_frequency_component_arry[block_number][60];
+      scaned_freaquency_image[i*8+6][n*8+7] = inversed_frequency_component_arry[block_number][61];
+      scaned_freaquency_image[i*8+7][n*8+6] = inversed_frequency_component_arry[block_number][62];
+      scaned_freaquency_image[i*8+7][n*8+7] = inversed_frequency_component_arry[block_number][63];
+      block_number++;
+    }
+  }
+
 }
 
 
-void inverse_quantization(int **inverse_encoded_image, double **inverse_quantized_image){
+void inverse_quantization(int **scaned_freaquency_image, double **inverse_quantized_image){
   int i,n,u,v;
 
   for(i=0; i<32; i++){
     for(n=0; n<32; n++){
       for(u=0; u<8; u++){
         for(v=0; v<8; v++){
-          inverse_quantized_image[i*8+u][n*8+v] = q_table[u][v] * inverse_encoded_image[i*8+u][n*8+v];
+          inverse_quantized_image[i*8+u][n*8+v] = q_table[u][v] * scaned_freaquency_image[i*8+u][n*8+v];
         }
       }
-      inverse_quantized_image[i][n] = q_table[i][n] * inverse_encoded_image[i][n];
+      inverse_quantized_image[i][n] = q_table[i][n] * scaned_freaquency_image[i][n];
     }
   }
 }
