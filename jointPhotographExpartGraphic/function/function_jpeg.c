@@ -183,7 +183,6 @@ void dc_group_binary(int **scaned_quantized_image_arry, int block_number, long *
   for(i=0; i<dc_length_table[dc_group]; i++){
     encode_data_arry[*encode_data_number] = dc_code_table[dc_group][i];
     *encode_data_number += 1;
-
   }
 }
 
@@ -233,10 +232,9 @@ void ac_group_binary(int *encode_data_arry, long *encode_data_number, int ac_gro
   int i;
 
   if(ac_group != 0){
-    for(i=0; i<ac_length_table[*ac_zero_run*11+ac_group]; i++){
-      encode_data_arry[*encode_data_number] = ac_code_table[*ac_zero_run*11 + ac_group][i];
+    for(i=0; i<ac_length_table[(*ac_zero_run)*11+ac_group]; i++){
+      encode_data_arry[*encode_data_number] = (int)ac_code_table[(*ac_zero_run)*11 + ac_group][i];
       *encode_data_number += 1;
-
     }
     *ac_zero_run = 0;
   }
@@ -248,7 +246,7 @@ void add_zero_run_code(int *encode_data_arry, long *encode_data_number, int *ac_
 
   while(*ac_zero_run >= 15){
     for(i=0; i<ac_length_table[165]; i++){
-      encode_data_arry[*encode_data_number] = ac_code_table[165][i];
+      encode_data_arry[*encode_data_number] = (int)ac_code_table[165][i];
       *encode_data_number += 1;
     }
     *ac_zero_run -= 15;
@@ -272,7 +270,6 @@ void compression_to_raw(unsigned char *raw_encode_data, long *encode_data_number
       raw_encode_data[i/8] += pow(2,(7-(i%8)));
     }
   }
-
 }
 
 //inverse側
@@ -280,7 +277,11 @@ void compression_to_raw(unsigned char *raw_encode_data, long *encode_data_number
 //逆符号化
 
 void inverse_binary_data(unsigned char raw_data, int *inversed_encoded_binary_array, long *inverse_binary_number){
-  int i,binary_code[8] = {0};
+  int i, *binary_code;
+  binary_code = malloc(sizeof(int)*8);
+  for (i=0; i<8; i++) {
+    binary_code[i] = 0;
+  }
 
   for(i=0; i<8; i++){
     if((int)raw_data%2 == 1){
@@ -295,15 +296,16 @@ void inverse_binary_data(unsigned char raw_data, int *inversed_encoded_binary_ar
     inversed_encoded_binary_array[*inverse_binary_number] = binary_code[7-i];
     *inverse_binary_number += 1;
   }
+  free(binary_code);
 }
 
-int serch_dc_table(int *dc_group_binary, int binary_count){
+int serch_dc_table(int *dc_group_binary){
   int i,n;
   bool found_flag;
 
   for(n=0; n<12; n++){
     found_flag = true;
-    for(i=0; i<binary_count; i++){
+    for(i=0; i<9; i++){
       if(!((int)dc_code_table[n][i] == dc_group_binary[i])){
         found_flag = false;
       }
@@ -316,16 +318,22 @@ int serch_dc_table(int *dc_group_binary, int binary_count){
 }
 
 int dc_group_judgment(int start_point, int *inversed_encoded_binary_array){
-  int i = 0, dc_group_binary[9]={-1}, dc_group = -1;
+  int i,n=0, *dc_group_binary, dc_group = -1;
+  dc_group_binary = malloc(sizeof(int)*9);
+  for(i=0; i<9; i++){
+    dc_group_binary[i] = -1;
+  }
 
   while(dc_group == -1){
-    dc_group_binary[i] = inversed_encoded_binary_array[start_point+i];
-    dc_group = serch_dc_table(dc_group_binary, (i+1));
+    dc_group_binary[n] = inversed_encoded_binary_array[start_point+n];
+    dc_group = serch_dc_table(dc_group_binary);
+    // printf("%d\n",dc_group );
 
     if(dc_group != -1){
+      free(dc_group_binary);
       return dc_group;
     }
-    i++;
+    n++;
   }
   return (0);
 }
@@ -336,14 +344,17 @@ int ac_group_judgment(int start_point, int *inversed_encoded_binary_array){
 
   for(i=0; i<16; i++){
     for(n=1; n<=10; n++){
+      faund_flag = true;
       code_table_point = i*11+n;
-      for(j=0; j<ac_length_table[code_table_point]; j++){
-        if(inversed_encoded_binary_array[start_point+j] != (int)ac_code_table[j]){
-          faund_flag = false;
+      if((int)ac_length_table[code_table_point] != -1){
+        for(j=0; j<(int)ac_length_table[code_table_point]; j++){
+          if(inversed_encoded_binary_array[start_point+j] != (int)ac_code_table[code_table_point][j]){
+            faund_flag = false;
+          }
         }
-      }
-      if(faund_flag){
-        return code_table_point;
+        if(faund_flag){
+          return code_table_point;
+        }
       }
     }
   }
@@ -352,6 +363,10 @@ int ac_group_judgment(int start_point, int *inversed_encoded_binary_array){
 
 int integer_conversion(int start_point, int *inversed_encoded_binary_array, int value_group){
   int i = 0, value=0;
+
+  if(value_group == 0){
+    return 0;
+  }
 
   while(i<value_group){
     if(inversed_encoded_binary_array[start_point+i] == 1){
@@ -362,7 +377,7 @@ int integer_conversion(int start_point, int *inversed_encoded_binary_array, int 
 
   if(inversed_encoded_binary_array[start_point] == 0){
     //負数の処理
-    return value = pow(2,value_group) - value - 1;
+    return value - (pow(2,value_group) - 1);
   }
   else{
     //正数ならそのまま
@@ -462,15 +477,15 @@ void inverse_quantization(int **scaned_freaquency_image, double **inverse_quanti
     for(n=0; n<32; n++){
       for(u=0; u<8; u++){
         for(v=0; v<8; v++){
-          inverse_quantized_image[i*8+u][n*8+v] = q_table[u][v] * scaned_freaquency_image[i*8+u][n*8+v];
+          inverse_quantized_image[i*8+u][n*8+v] = (int)q_table[u][v] * scaned_freaquency_image[i*8+u][n*8+v];
         }
       }
-      inverse_quantized_image[i][n] = q_table[i][n] * scaned_freaquency_image[i][n];
+      // inverse_quantized_image[i][n] = (int)q_table[i][n] * scaned_freaquency_image[i][n];
     }
   }
 }
 
-void inverseDiscreteCosineTransform(unsigned char **raw_image, double **inverse_dct_image){
+void inverseDiscreteCosineTransform(double **raw_image, double **inverse_dct_image){
 
   int i,n,j,k,u,v;
   double integral_dctimage_cosine;
@@ -488,7 +503,7 @@ void inverseDiscreteCosineTransform(unsigned char **raw_image, double **inverse_
             }
           }
 
-          raw_image[i*8+j][n*8+k] = (unsigned char)1.0/4.0 * integral_dctimage_cosine;
+          raw_image[i*8+j][n*8+k] = (double)1.0/4.0 * integral_dctimage_cosine;
 
         }
       }
