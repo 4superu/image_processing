@@ -48,7 +48,27 @@ int main(){
 
   //DCT
   discreteCosineTransform(raw_image, dct_image);
-  //量子化
+
+  // // 256DCT課題
+  // discreteCosineTransform256(raw_image, dct_image);
+  // fp = fopen("image/dct_image256.raw", "wb");
+  // for(i=0; i<IMAGE_SIZE; i++){
+  //   for (n=0; n<IMAGE_SIZE; n++){
+  //     fwrite(&dct_image[i][n], sizeof(double),1,fp);
+  //   }
+  // }
+  // fclose(fp);
+  //
+  // inverseDiscreteCosineTransform256(inv_raw_image, dct_image);
+  // fp = fopen("image/inv_dct_image256.raw", "wb");
+  // for(i=0; i<IMAGE_SIZE; i++){
+  //   for (n=0; n<IMAGE_SIZE; n++){
+  //     fwrite(&dct_image[i][n], sizeof(double),1,fp);
+  //   }
+  // }
+  // fclose(fp);
+
+  // //量子化
   quantization(dct_image, quantized_image);
   //ジグザグスキャン
   scan_zigzag(scaned_quantized_image_arry, quantized_image);
@@ -68,14 +88,10 @@ int main(){
         //AC符号化
         ac_group = select_ac_group(scaned_quantized_image_arry[block_number][element_number
         ]);
-        ///debug_point
         if(ac_group != 0){
           add_zero_run_code(encode_data_arry, &encode_data_number, &ac_zero_run);
-          ///debug_point
           ac_group_binary(encode_data_arry, &encode_data_number, ac_group, &ac_zero_run);
-          ///debug_point
           binary_conversion(scaned_quantized_image_arry[block_number][element_number], encode_data_arry, &encode_data_number);
-          ///debug_point
         }
         else{
           ac_zero_run++;
@@ -88,28 +104,21 @@ int main(){
       }
     }
   }
-  // printf("%ld\n",encode_data_number );
-  // for(i=0; i<32*32; i++){
-  //   for(n=0; n<64; n++){
-  //     printf("%d ",scaned_quantized_image_arry[i][n] );
-  //   }
-  //   printf("\n\n");
-  // }
 
   inversed_encoded_binary_array = malloc(sizeof(int)*(encode_data_number+8));
 
-  //raw書き込み
+  // raw書き込み
   raw_encode_data = malloc(sizeof(unsigned char)*encode_data_number);
   compression_to_raw(raw_encode_data, &encode_data_number, encode_data_arry);
 
   fp = fopen("image/encode_data.raw", "wb");
-  fwrite(raw_encode_data, sizeof(unsigned char), 256*256, fp);
+  fwrite(raw_encode_data, sizeof(unsigned char), encode_data_number/8+1.0, fp);
   fclose(fp);
 
   free(raw_image);
   free(dct_image);
   free(quantized_image);
-  // free(scaned_quantized_image_arry);
+  free(scaned_quantized_image_arry);
   //transform終了
 
   //inverse側
@@ -133,9 +142,11 @@ int main(){
     if(dc_flag){
       //dc_group探す
       dc_group = dc_group_judgment(inverse_binary_progress, inversed_encoded_binary_array);
+
       //dc_groupの符号分進める
       inverse_binary_progress += (int)dc_length_table[dc_group];
-      //dc値決める☆☆
+
+      //dc値決める
       dc_value = integer_conversion(inverse_binary_progress, inversed_encoded_binary_array, dc_group) + pre_dc_value;
 
       //配列に入れて、前のdc値更新
@@ -166,7 +177,7 @@ int main(){
         inverse_binary_progress += 4;
       }
 
-      //特殊ビット判定（ ダメ ）原因は他？
+      //特殊ビット判定
       if(element_number != 0){
         special_bit_flag = true;
         while(special_bit_flag){
@@ -196,7 +207,6 @@ int main(){
         }
         //ac値判定
         ac_value = integer_conversion(inverse_binary_progress, inversed_encoded_binary_array, ac_group);
-        // printf("%d: %d\n",ac_group, ac_value );
         inverse_binary_progress += ac_group;
         inversed_frequency_component_arry[block_number][element_number] = ac_value;
         element_number++;
@@ -215,6 +225,7 @@ int main(){
   inverse_quantization(scaned_freaquency_image, quantized_image_inverse);
 
   inverseDiscreteCosineTransform(inv_raw_image, quantized_image_inverse);
+  // inverseDiscreteCosineTransform256(inv_raw_image, quantized_image_inverse);
 
   fp = fopen("image/inv_lenna.raw", "wb");
   for(i=0; i<IMAGE_SIZE; i++){

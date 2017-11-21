@@ -50,6 +50,25 @@ void discreteCosineTransform(unsigned char **raw_image, double **dct_image){
   }
 }
 
+void discreteCosineTransform256(unsigned char **raw_image, double **dct_image){
+  int i,n,j,k,u,v;
+  double integral_image_cosine;
+
+  for(u=0; u<256; u++){
+    for(v=0; v<256; v++){
+      integral_image_cosine = 0;
+      for(j=0; j<256; j++){
+        for(k=0; k<256; k++){
+          integral_image_cosine += (double)raw_image[j][k] * cos((2.0*j+1.0)*u*M_PI/512.0) * cos((2.0*k+1.0)*v*M_PI/512.0);
+        }
+      }
+      dct_image[u][v] = integral_image_cosine * return_coefficient(u,v)/128.0;
+      printf("%d:%d\n",u,v );
+    }
+  }
+
+}
+
 //量子化
 
 int integer_by_threshould(double quantized_image_element){
@@ -510,4 +529,27 @@ void inverseDiscreteCosineTransform(double **raw_image, double **inverse_dct_ima
 
     }
   }
+}
+
+void inverseDiscreteCosineTransform256(double **raw_image, double **inverse_dct_image){
+
+  int j,k,u,v;
+  double integral_dctimage_cosine;
+
+
+  for(j=0; j<256; j++){
+    for(k=0; k<256; k++){
+
+      integral_dctimage_cosine = 0;
+      for(u=0; u<256; u++){
+        for(v=0; v<256; v++){
+          integral_dctimage_cosine += return_coefficient(u,v) * inverse_dct_image[u][v] * cos((2.0*j+1.0)*u*M_PI/512.0) * cos((2.0*k+1.0)*v*M_PI/512.0);
+        }
+      }
+
+      raw_image[j][k] = (double)1.0/128.0 * integral_dctimage_cosine;
+      printf("%d:%d\n",j,k );
+    }
+  }
+
 }
