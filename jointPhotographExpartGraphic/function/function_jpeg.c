@@ -50,6 +50,25 @@ void discreteCosineTransform(unsigned char **raw_image, double **dct_image){
   }
 }
 
+void discreteCosineTransform256(unsigned char **raw_image, double **dct_image){
+  int i,n,j,k,u,v;
+  double integral_image_cosine;
+
+  for(u=0; u<256; u++){
+    for(v=0; v<256; v++){
+      integral_image_cosine = 0;
+      for(j=0; j<256; j++){
+        for(k=0; k<256; k++){
+          integral_image_cosine += (double)raw_image[j][k] * cos((2.0*j+1.0)*u*M_PI/512.0) * cos((2.0*k+1.0)*v*M_PI/512.0);
+        }
+      }
+      dct_image[u][v] = integral_image_cosine * return_coefficient(u,v)/128.0;
+      printf("%d:%d\n",u,v );
+    }
+  }
+
+}
+
 //量子化
 
 int integer_by_threshould(double quantized_image_element){
@@ -69,7 +88,7 @@ void quantization(double **dct_image, int **quantized_image){
     for(n=0; n<32; n++){
       for(u=0; u<8; u++){
         for(v=0; v<8; v++){
-          quantized_image[i*8+u][n*8+v] = integer_by_threshould(dct_image[i*8+u][n*8+v] / q_table[u][v]);
+          quantized_image[i*8+u][n*8+v] = integer_by_threshould(dct_image[i*8+u][n*8+v] / (double)q_table[u][v]);
         }
       }
     }
@@ -191,8 +210,9 @@ void binary_conversion(int decimal_number, int *encode_data_arry, long *encode_d
   int bit_number = 0, binary_code[12] = {0};
 
   while(abs(decimal_number) >0){
+    //値が正の時
     if(decimal_number > 0){
-      if(abs(decimal_number)%2 == 1){
+      if(decimal_number%2 == 1){
         binary_code[bit_number] = 1;
       }
       else{
@@ -207,7 +227,6 @@ void binary_conversion(int decimal_number, int *encode_data_arry, long *encode_d
         binary_code[bit_number] = 1;
       }
     }
-
     decimal_number = decimal_number/2;
     bit_number += 1;
   }
@@ -231,14 +250,12 @@ int select_ac_group(int ac_coefficient){
 void ac_group_binary(int *encode_data_arry, long *encode_data_number, int ac_group, int *ac_zero_run){
   int i;
 
-  if(ac_group > 0){
-    for(i=0; i<ac_length_table[ac_group]; i++){
-      encode_data_arry[*encode_data_number] = ac_code_table[ac_group][i];
+  if(ac_group != 0){
+    for(i=0; i<ac_length_table[(*ac_zero_run)*11+ac_group]; i++){
+      encode_data_arry[*encode_data_number] = (int)ac_code_table[(*ac_zero_run)*11 + ac_group][i];
       *encode_data_number += 1;
     }
-  }
-  else{
-    *ac_zero_run += 1;
+    *ac_zero_run = 0;
   }
 }
 
@@ -248,7 +265,7 @@ void add_zero_run_code(int *encode_data_arry, long *encode_data_number, int *ac_
 
   while(*ac_zero_run >= 15){
     for(i=0; i<ac_length_table[165]; i++){
-      encode_data_arry[*encode_data_number] = ac_code_table[165][i];
+      encode_data_arry[*encode_data_number] = (int)ac_code_table[165][i];
       *encode_data_number += 1;
     }
     *ac_zero_run -= 15;
@@ -272,103 +289,267 @@ void compression_to_raw(unsigned char *raw_encode_data, long *encode_data_number
       raw_encode_data[i/8] += pow(2,(7-(i%8)));
     }
   }
-
 }
 
 //inverse側
 
 //逆符号化
 
-//一旦全部 01 に戻す
 void inverse_binary_data(unsigned char raw_data, int *inversed_encoded_binary_array, long *inverse_binary_number){
-  int i,binary_code[8] = {0};
+  int i, *binary_code;
+  binary_code = malloc(sizeof(int)*8);
+  for (i=0; i<8; i++) {
+    binary_code[i] = 0;
+  }
 
   for(i=0; i<8; i++){
-    if(raw_data%2 == 1){
+    if((int)raw_data%2 == 1){
       binary_code[i] = 1;
     }
     else{
       binary_code[i] = 0;
     }
-    raw_data = raw_data/2;
+    raw_data = (int)raw_data/2;
   }
   for(i=0; i<8; i++){
     inversed_encoded_binary_array[*inverse_binary_number] = binary_code[7-i];
     *inverse_binary_number += 1;
   }
+  free(binary_code);
 }
 
-int serch_dc_table(int *dc_group_binary, int binary_count){
+int serch_dc_table(int *dc_group_binary){
   int i,n;
-  bool found_flag = true;
+  bool found_flag;
+
   for(n=0; n<12; n++){
-    for(i=0; i<binary_count; i++){
+    found_flag = true;
+    for(i=0; i<9; i++){
       if(!((int)dc_code_table[n][i] == dc_group_binary[i])){
         found_flag = false;
       }
     }
     if(found_flag){
-      return binary_count;
+      return n;
     }
   }
-
   return -1;
 }
 
 int dc_group_judgment(int start_point, int *inversed_encoded_binary_array){
-  int i = start_point, dc_group_binary[9], dc_group = -1;
+  int i,n=0, *dc_group_binary, dc_group = -1;
+  dc_group_binary = malloc(sizeof(int)*9);
+  for(i=0; i<9; i++){
+    dc_group_binary[i] = -1;
+  }
 
   while(dc_group == -1){
-    dc_group_binary[i] = inversed_encoded_binary_array[i];
-    dc_group = serch_dc_table(dc_group_binary, (i - start_point + 1));
+    dc_group_binary[n] = inversed_encoded_binary_array[start_point+n];
+    dc_group = serch_dc_table(dc_group_binary);
+    // printf("%d\n",dc_group );
 
     if(dc_group != -1){
+      free(dc_group_binary);
       return dc_group;
+    }
+    n++;
+  }
+  return (0);
+}
+
+int ac_group_judgment(int start_point, int *inversed_encoded_binary_array){
+  int i,n,j,code_table_point;
+  bool faund_flag = true;
+
+  for(i=0; i<16; i++){
+    for(n=1; n<=10; n++){
+      faund_flag = true;
+      code_table_point = i*11+n;
+      if((int)ac_length_table[code_table_point] != -1){
+        for(j=0; j<(int)ac_length_table[code_table_point]; j++){
+          if(inversed_encoded_binary_array[start_point+j] != (int)ac_code_table[code_table_point][j]){
+            faund_flag = false;
+          }
+        }
+        if(faund_flag){
+          return code_table_point;
+        }
+      }
+    }
+  }
+  return -1;
+}
+
+int integer_conversion(int start_point, int *inversed_encoded_binary_array, int value_group){
+  int i = 0, value=0;
+
+  if(value_group == 0){
+    return 0;
+  }
+
+  while(i<value_group){
+    if(inversed_encoded_binary_array[start_point+i] == 1){
+      value += pow(2, value_group-(i+1));
     }
     i++;
   }
-  return dc_group;
+
+  if(inversed_encoded_binary_array[start_point] == 0){
+    //負数の処理
+    return value - (pow(2,value_group) - 1);
+  }
+  else{
+    //正数ならそのまま
+    return value;
+  }
+}
+
+void inverse_scan_zigzag(int **inversed_frequency_component_arry, int **scaned_freaquency_image){
+
+  int i,n,block_number=0;
+
+  for(i=0; i<32; i++){
+    for(n=0; n<32; n++){
+
+      scaned_freaquency_image[i*8+0][n*8+0] = inversed_frequency_component_arry[block_number][0];
+      scaned_freaquency_image[i*8+0][n*8+1] = inversed_frequency_component_arry[block_number][1];
+      scaned_freaquency_image[i*8+1][n*8+0] = inversed_frequency_component_arry[block_number][2];
+      scaned_freaquency_image[i*8+2][n*8+0] = inversed_frequency_component_arry[block_number][3];
+      scaned_freaquency_image[i*8+1][n*8+1] = inversed_frequency_component_arry[block_number][4];
+      scaned_freaquency_image[i*8+0][n*8+2] = inversed_frequency_component_arry[block_number][5];
+      scaned_freaquency_image[i*8+0][n*8+3] = inversed_frequency_component_arry[block_number][6];
+      scaned_freaquency_image[i*8+1][n*8+2] = inversed_frequency_component_arry[block_number][7];
+
+      scaned_freaquency_image[i*8+2][n*8+1] = inversed_frequency_component_arry[block_number][8];
+      scaned_freaquency_image[i*8+3][n*8+0] = inversed_frequency_component_arry[block_number][9];
+      scaned_freaquency_image[i*8+4][n*8+0] = inversed_frequency_component_arry[block_number][10];
+      scaned_freaquency_image[i*8+3][n*8+1] = inversed_frequency_component_arry[block_number][11];
+      scaned_freaquency_image[i*8+2][n*8+2] = inversed_frequency_component_arry[block_number][12];
+      scaned_freaquency_image[i*8+1][n*8+3] = inversed_frequency_component_arry[block_number][13];
+      scaned_freaquency_image[i*8+0][n*8+4] = inversed_frequency_component_arry[block_number][14];
+      scaned_freaquency_image[i*8+0][n*8+5] = inversed_frequency_component_arry[block_number][15];
+
+      scaned_freaquency_image[i*8+1][n*8+4] = inversed_frequency_component_arry[block_number][16];
+      scaned_freaquency_image[i*8+2][n*8+3] = inversed_frequency_component_arry[block_number][17];
+      scaned_freaquency_image[i*8+3][n*8+2] = inversed_frequency_component_arry[block_number][18];
+      scaned_freaquency_image[i*8+4][n*8+1] = inversed_frequency_component_arry[block_number][19];
+      scaned_freaquency_image[i*8+5][n*8+0] = inversed_frequency_component_arry[block_number][20];
+      scaned_freaquency_image[i*8+6][n*8+0] = inversed_frequency_component_arry[block_number][21];
+      scaned_freaquency_image[i*8+5][n*8+1] = inversed_frequency_component_arry[block_number][22];
+      scaned_freaquency_image[i*8+4][n*8+2] = inversed_frequency_component_arry[block_number][23];
+
+      scaned_freaquency_image[i*8+3][n*8+3] = inversed_frequency_component_arry[block_number][24];
+      scaned_freaquency_image[i*8+2][n*8+4] = inversed_frequency_component_arry[block_number][25];
+      scaned_freaquency_image[i*8+1][n*8+5] = inversed_frequency_component_arry[block_number][26];
+      scaned_freaquency_image[i*8+0][n*8+6] = inversed_frequency_component_arry[block_number][27];
+      scaned_freaquency_image[i*8+0][n*8+7] = inversed_frequency_component_arry[block_number][28];
+      scaned_freaquency_image[i*8+1][n*8+6] = inversed_frequency_component_arry[block_number][29];
+      scaned_freaquency_image[i*8+2][n*8+5] = inversed_frequency_component_arry[block_number][30];
+      scaned_freaquency_image[i*8+3][n*8+4] = inversed_frequency_component_arry[block_number][31];
+
+      scaned_freaquency_image[i*8+4][n*8+3] = inversed_frequency_component_arry[block_number][32];
+      scaned_freaquency_image[i*8+5][n*8+2] = inversed_frequency_component_arry[block_number][33];
+      scaned_freaquency_image[i*8+6][n*8+1] = inversed_frequency_component_arry[block_number][34];
+      scaned_freaquency_image[i*8+7][n*8+0] = inversed_frequency_component_arry[block_number][35];
+      scaned_freaquency_image[i*8+7][n*8+1] = inversed_frequency_component_arry[block_number][36];
+      scaned_freaquency_image[i*8+6][n*8+2] = inversed_frequency_component_arry[block_number][37];
+      scaned_freaquency_image[i*8+5][n*8+3] = inversed_frequency_component_arry[block_number][38];
+      scaned_freaquency_image[i*8+4][n*8+4] = inversed_frequency_component_arry[block_number][39];
+
+      scaned_freaquency_image[i*8+3][n*8+5] = inversed_frequency_component_arry[block_number][40];
+      scaned_freaquency_image[i*8+2][n*8+6] = inversed_frequency_component_arry[block_number][41];
+      scaned_freaquency_image[i*8+1][n*8+7] = inversed_frequency_component_arry[block_number][42];
+      scaned_freaquency_image[i*8+2][n*8+7] = inversed_frequency_component_arry[block_number][43];
+      scaned_freaquency_image[i*8+3][n*8+6] = inversed_frequency_component_arry[block_number][44];
+      scaned_freaquency_image[i*8+4][n*8+5] = inversed_frequency_component_arry[block_number][45];
+      scaned_freaquency_image[i*8+5][n*8+4] = inversed_frequency_component_arry[block_number][46];
+      scaned_freaquency_image[i*8+6][n*8+3] = inversed_frequency_component_arry[block_number][47];
+
+      scaned_freaquency_image[i*8+7][n*8+2] = inversed_frequency_component_arry[block_number][48];
+      scaned_freaquency_image[i*8+7][n*8+3] = inversed_frequency_component_arry[block_number][49];
+      scaned_freaquency_image[i*8+6][n*8+4] = inversed_frequency_component_arry[block_number][50];
+      scaned_freaquency_image[i*8+5][n*8+5] = inversed_frequency_component_arry[block_number][51];
+      scaned_freaquency_image[i*8+4][n*8+6] = inversed_frequency_component_arry[block_number][52];
+      scaned_freaquency_image[i*8+3][n*8+7] = inversed_frequency_component_arry[block_number][53];
+      scaned_freaquency_image[i*8+4][n*8+7] = inversed_frequency_component_arry[block_number][54];
+      scaned_freaquency_image[i*8+5][n*8+6] = inversed_frequency_component_arry[block_number][55];
+
+      scaned_freaquency_image[i*8+6][n*8+5] = inversed_frequency_component_arry[block_number][56];
+      scaned_freaquency_image[i*8+7][n*8+4] = inversed_frequency_component_arry[block_number][57];
+      scaned_freaquency_image[i*8+7][n*8+5] = inversed_frequency_component_arry[block_number][58];
+      scaned_freaquency_image[i*8+6][n*8+6] = inversed_frequency_component_arry[block_number][59];
+      scaned_freaquency_image[i*8+5][n*8+7] = inversed_frequency_component_arry[block_number][60];
+      scaned_freaquency_image[i*8+6][n*8+7] = inversed_frequency_component_arry[block_number][61];
+      scaned_freaquency_image[i*8+7][n*8+6] = inversed_frequency_component_arry[block_number][62];
+      scaned_freaquency_image[i*8+7][n*8+7] = inversed_frequency_component_arry[block_number][63];
+      block_number++;
+    }
+  }
+
 }
 
 
-// void inverse_quantization(int **inverse_encoded_image, double **inverse_quantized_image){
-//   int i,n,u,v;
-//
-//   for(i=0; i<32; i++){
-//     for(n=0; n<32; n++){
-//       for(u=0; u<8; u++){
-//         for(v=0; v<8; v++){
-//           inverse_quantized_image[i*8+u][n*8+v] = q_table[u][v] * inverse_encoded_image[i*8+u][n*8+v];
-//         }
-//       }
-//       inverse_quantized_image[i][n] = q_table[i][n] * inverse_encoded_image[i][n];
-//     }
-//   }
-// }
-//
-// void inverseDiscreteCosineTransform(unsigned char **raw_image, double **inverse_dct_image){
-//
-//   int i,n,j,k,u,v;
-//   double integral_dctimage_cosine;
-//
-//   for(i=0; i<32; i++){
-//     for(n=0; n<32; n++){
-//
-//       for(j=0; j<8; j++){
-//         for(k=0; k<8; k++){
-//
-//           integral_dctimage_cosine = 0;
-//           for(u=0; u<8; u++){
-//             for(v=0; v<8; v++){
-//               integral_dctimage_cosine += return_coefficient(u,v) * inverse_dct_image[i*8+u][n*8+v] * cos((2.0*j+1.0)*u*M_PI/16.0) * cos((2.0*k+1.0)*v*M_PI/16.0);
-//             }
-//           }
-//
-//           raw_image[i*8+j][n*8+k] = (unsigned char)1.0/4.0 * integral_dctimage_cosine;
-//
-//         }
-//       }
-//
-//     }
-//   }
-// }
+void inverse_quantization(int **scaned_freaquency_image, double **inverse_quantized_image){
+  int i,n,u,v;
+
+  for(i=0; i<32; i++){
+    for(n=0; n<32; n++){
+      for(u=0; u<8; u++){
+        for(v=0; v<8; v++){
+          inverse_quantized_image[i*8+u][n*8+v] = (int)q_table[u][v] * scaned_freaquency_image[i*8+u][n*8+v];
+        }
+      }
+      // inverse_quantized_image[i][n] = (int)q_table[i][n] * scaned_freaquency_image[i][n];
+    }
+  }
+}
+
+void inverseDiscreteCosineTransform(double **raw_image, double **inverse_dct_image){
+
+  int i,n,j,k,u,v;
+  double integral_dctimage_cosine;
+
+  for(i=0; i<32; i++){
+    for(n=0; n<32; n++){
+
+      for(j=0; j<8; j++){
+        for(k=0; k<8; k++){
+
+          integral_dctimage_cosine = 0;
+          for(u=0; u<8; u++){
+            for(v=0; v<8; v++){
+              integral_dctimage_cosine += return_coefficient(u,v) * inverse_dct_image[i*8+u][n*8+v] * cos((2.0*j+1.0)*u*M_PI/16.0) * cos((2.0*k+1.0)*v*M_PI/16.0);
+            }
+          }
+
+          raw_image[i*8+j][n*8+k] = (double)1.0/4.0 * integral_dctimage_cosine;
+
+        }
+      }
+
+    }
+  }
+}
+
+void inverseDiscreteCosineTransform256(double **raw_image, double **inverse_dct_image){
+
+  int j,k,u,v;
+  double integral_dctimage_cosine;
+
+
+  for(j=0; j<256; j++){
+    for(k=0; k<256; k++){
+
+      integral_dctimage_cosine = 0;
+      for(u=0; u<256; u++){
+        for(v=0; v<256; v++){
+          integral_dctimage_cosine += return_coefficient(u,v) * inverse_dct_image[u][v] * cos((2.0*j+1.0)*u*M_PI/512.0) * cos((2.0*k+1.0)*v*M_PI/512.0);
+        }
+      }
+
+      raw_image[j][k] = (double)1.0/128.0 * integral_dctimage_cosine;
+      printf("%d:%d\n",j,k );
+    }
+  }
+
+}
