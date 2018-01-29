@@ -9,9 +9,11 @@ int main(){
 
   int i,n,j,k,u,v;
   int binary_length[32*32] = {0};
+  double quantize_weight= 10.0, psnr;
+  int task_start_point, task_end_point;
 
-//transform変数
-  raw_image = malloc(sizeof(unsigned char*)*IMAGE_SIZE);
+// transform変数
+  raw_image = (unsigned char**)malloc(sizeof(unsigned char*)*IMAGE_SIZE);
   dct_image = malloc(sizeof(double*)*IMAGE_SIZE);
   quantized_image = malloc(sizeof(int*)*IMAGE_SIZE);
   scaned_quantized_image_arry = malloc(sizeof(int*)*1024);
@@ -21,6 +23,7 @@ int main(){
   quantized_image_inverse = malloc(sizeof(double*)*IMAGE_SIZE);
   scaned_freaquency_image = malloc(sizeof(double*)*IMAGE_SIZE);
   inversed_frequency_component_arry = malloc(sizeof(int*)*1024);
+  normalized_inv_image = malloc(sizeof(unsigned char*)*IMAGE_SIZE);
 
   for(i=0; i<IMAGE_SIZE; i++){
     raw_image[i] = malloc(sizeof(unsigned char)*IMAGE_SIZE);
@@ -30,6 +33,7 @@ int main(){
     inv_raw_image[i] = malloc(sizeof(double)*IMAGE_SIZE);
     quantized_image_inverse[i] = malloc(sizeof(double)*IMAGE_SIZE);
     scaned_freaquency_image[i] = malloc(sizeof(double)*IMAGE_SIZE);
+    normalized_inv_image[i] = malloc(sizeof(unsigned char*)*IMAGE_SIZE);
   }
 
   for(i=0; i<1024; i++){
@@ -63,13 +67,21 @@ int main(){
   // fp = fopen("image/inv_dct_image256.raw", "wb");
   // for(i=0; i<IMAGE_SIZE; i++){
   //   for (n=0; n<IMAGE_SIZE; n++){
+  //     fwrite(&inv_raw_image[i][n], sizeof(double),1,fp);
+  //   }
+  // }
+  // fclose(fp);
+
+  // fp = fopen("image/dct_image.raw", "wb");
+  // for(i=0; i<IMAGE_SIZE; i++){
+  //   for (n=0; n<IMAGE_SIZE; n++){
   //     fwrite(&dct_image[i][n], sizeof(double),1,fp);
   //   }
   // }
   // fclose(fp);
 
   // //量子化
-  quantization(dct_image, quantized_image);
+  quantization(dct_image, quantized_image, quantize_weight);
   //ジグザグスキャン
   scan_zigzag(scaned_quantized_image_arry, quantized_image);
 
@@ -99,7 +111,6 @@ int main(){
         if(element_number == 63){
           add_block_end_binary(encode_data_arry, &encode_data_number);
           ac_zero_run = 0;
-          // binary_length[block_number] = encode_data_number;
         }
       }
     }
@@ -115,7 +126,6 @@ int main(){
   fwrite(raw_encode_data, sizeof(unsigned char), encode_data_number/8+1.0, fp);
   fclose(fp);
 
-  free(raw_image);
   free(dct_image);
   free(quantized_image);
   free(scaned_quantized_image_arry);
@@ -222,10 +232,22 @@ int main(){
 
   inverse_scan_zigzag(inversed_frequency_component_arry, scaned_freaquency_image);
 
-  inverse_quantization(scaned_freaquency_image, quantized_image_inverse);
+  inverse_quantization(scaned_freaquency_image, quantized_image_inverse, quantize_weight);
 
   inverseDiscreteCosineTransform(inv_raw_image, quantized_image_inverse);
-  // inverseDiscreteCosineTransform256(inv_raw_image, quantized_image_inverse);
+
+  // normalization(inv_raw_image, normalized_inv_image);
+
+  // psnr = PSNR2(raw_image, inv_raw_image);
+  // printf("%lf : %lf\n",quantize_weight, psnr);
+
+  // fp = fopen("image/inv_lenna.raw", "wb");
+  // for(i=0; i<IMAGE_SIZE; i++){
+  //   for (n=0; n<IMAGE_SIZE; n++){
+  //     fwrite(&normalized_inv_image[i][n], sizeof(unsigned char),1,fp);
+  //   }
+  // }
+  // fclose(fp);
 
   fp = fopen("image/inv_lenna.raw", "wb");
   for(i=0; i<IMAGE_SIZE; i++){
@@ -235,9 +257,12 @@ int main(){
   }
   fclose(fp);
 
+
+  free(raw_image);
   free(inv_raw_image);
   free(quantized_image_inverse);
   free(scaned_freaquency_image);
   free(inversed_encoded_binary_array);
   free(inversed_frequency_component_arry);
+  free(normalized_inv_image);
 }
