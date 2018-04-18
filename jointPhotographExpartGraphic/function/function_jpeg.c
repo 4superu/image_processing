@@ -81,14 +81,14 @@ int integer_by_threshould(double quantized_image_element){
   }
 }
 
-void quantization(double **dct_image, int **quantized_image){
+void quantization(double **dct_image, int **quantized_image, double quantize_weight){
   int i,n,u,v;
 
   for(i=0; i<32; i++){
     for(n=0; n<32; n++){
       for(u=0; u<8; u++){
         for(v=0; v<8; v++){
-          quantized_image[i*8+u][n*8+v] = integer_by_threshould(dct_image[i*8+u][n*8+v] / (double)q_table[u][v]);
+          quantized_image[i*8+u][n*8+v] = integer_by_threshould(dct_image[i*8+u][n*8+v] / (q_table[u][v] * quantize_weight));
         }
       }
     }
@@ -489,17 +489,16 @@ void inverse_scan_zigzag(int **inversed_frequency_component_arry, int **scaned_f
 }
 
 
-void inverse_quantization(int **scaned_freaquency_image, double **inverse_quantized_image){
+void inverse_quantization(int **scaned_freaquency_image, double **inverse_quantized_image, double quantize_weight){
   int i,n,u,v;
 
   for(i=0; i<32; i++){
     for(n=0; n<32; n++){
       for(u=0; u<8; u++){
         for(v=0; v<8; v++){
-          inverse_quantized_image[i*8+u][n*8+v] = (int)q_table[u][v] * scaned_freaquency_image[i*8+u][n*8+v];
+          inverse_quantized_image[i*8+u][n*8+v] = q_table[u][v] * quantize_weight * scaned_freaquency_image[i*8+u][n*8+v];
         }
       }
-      // inverse_quantized_image[i][n] = (int)q_table[i][n] * scaned_freaquency_image[i][n];
     }
   }
 }
@@ -552,4 +551,62 @@ void inverseDiscreteCosineTransform256(double **raw_image, double **inverse_dct_
     }
   }
 
+}
+
+void normalization(double **inv_raw_image, unsigned char **normalized_inv_image){
+  int i,j;
+  double max_value=0, min_value=0, diff_max_min;
+
+  for(i=0; i<IMAGE_SIZE; i++){
+    for(j=0; j<IMAGE_SIZE; j++){
+      if(max_value < (double)inv_raw_image[i][j]){
+        max_value = (double)inv_raw_image[i][j];
+      }
+      if(min_value > (double)inv_raw_image[i][j]){
+        min_value = (double)inv_raw_image[i][j];
+      }
+
+    }
+  }
+
+  diff_max_min = max_value - min_value;
+
+  for(i=0; i<IMAGE_SIZE; i++){
+    for(j=0; j<IMAGE_SIZE; j++){
+
+      normalized_inv_image[i][j] = (unsigned char)(255*((inv_raw_image[i][j] - min_value)/diff_max_min));
+
+    }
+  }
+
+}
+
+double PSNR(unsigned char **raw_image, unsigned char **normalized_inv_image){
+  int i,j;
+  double sum_diff=0;
+
+  for(i=0; i<IMAGE_SIZE; i++){
+    for(j=0; j<IMAGE_SIZE; j++){
+      sum_diff += pow(((double)raw_image[i][j] - (double)normalized_inv_image[i][j]),2);
+    }
+  }
+
+  sum_diff = sum_diff/(IMAGE_SIZE*IMAGE_SIZE);
+
+  return 20*log10((255/sqrt(sum_diff)));
+}
+
+double PSNR2(unsigned char **raw_image, double **inv_raw_image){
+  int i,j;
+  double sum_diff=0;
+
+  for(i=0; i<IMAGE_SIZE; i++){
+    for(j=0; j<IMAGE_SIZE; j++){
+      sum_diff += pow((inv_raw_image[i][j] - (double)raw_image[i][j]),2);
+    }
+  }
+
+  sum_diff = sum_diff/(IMAGE_SIZE*IMAGE_SIZE);
+
+  return 20*log10((255/sqrt(sum_diff)));
 }

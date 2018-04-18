@@ -16,3 +16,5 @@ int **scaned_freaquency_image;
 
 //ビットで利用する配列
 int **inversed_frequency_component_arry, *inversed_encoded_binary_array;
+
+unsigned char **normalized_inv_image;
