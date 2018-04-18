@@ -3,6 +3,9 @@
 #include <math.h>
 #include "functionOtsu.c"
 
+#define BER_SIZE 600
+#define HOR_SIZE 400
+
 int main(){
 
   int i, j;

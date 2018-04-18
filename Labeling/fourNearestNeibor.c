@@ -24,7 +24,7 @@ int main(){
   for(int i=0; i<image_size_bertical; i++){
     image_arry[i] = (unsigned char*)malloc(sizeof(unsigned char)*image_size_horizontal);
   }
-  fp = fopen("../Image/lennna_in_class.256", "rb");
+  fp = fopen("./Image/lenna_otsu.raw", "rb");
   for(i=0;i<image_size_bertical;i++){
     for (j=0;j<image_size_horizontal;j++){
       fread(&image_arry[i][j], sizeof(unsigned char),1,fp);
@@ -57,7 +57,7 @@ int main(){
 
   int max_label_number = CheckMaxLabelingNumber(labeling_arry, image_size_bertical+2, image_size_horizontal+2);
 
-  fp = fopen("../Image/inclass_four_nearest_neibor_lenna.raw", "wb");
+  fp = fopen("./Image/labeling_lenna.raw", "wb");
   for(i=1;i<image_size_bertical+1;i++){
     for (j=1;j<image_size_horizontal+1;j++){
       fwrite(&labeling_arry[i][j], sizeof(int),1,fp);
